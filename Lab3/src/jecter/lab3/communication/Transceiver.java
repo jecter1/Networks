@@ -3,10 +3,11 @@ package jecter.lab3.communication;
 import jecter.lab3.communication.exceptions.CommunicationException;
 
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 
-public class Transceiver implements AutoCloseable {
+public class Transceiver implements AutoCloseable, Addressable {
     private static final String OPEN_SOCKET_EXCEPTION_MESSAGE = "Can't open socket";
 
 
@@ -45,5 +46,10 @@ public class Transceiver implements AutoCloseable {
     @Override
     public void close() {
         socket.close();
+    }
+
+    @Override
+    public InetSocketAddress getAddress() {
+        return new InetSocketAddress(socket.getInetAddress(), socket.getPort());
     }
 }

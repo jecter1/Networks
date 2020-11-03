@@ -6,14 +6,34 @@ import java.util.*;
 
 public class MessageQueue {
     private final Map<Message, Set<Neighbour>> messagesWithReceivers;
+    private final String nodeName;
 
 
-    public MessageQueue() {
+    public MessageQueue(String nodeName) {
         messagesWithReceivers = new HashMap<>();
+        this.nodeName = nodeName;
     }
 
     public synchronized void add(Message message, Set<Neighbour> receivers) {
+        if (receivers.isEmpty()) {
+            printNoReceiversIfMessageIsTextAndNodeIsSender(message);
+            return;
+        }
         messagesWithReceivers.put(message, receivers);
+    }
+
+    private void printNoReceiversIfMessageIsTextAndNodeIsSender(Message message) {
+        if (isMessageText(message) && isNodeSender(message)) {
+            System.out.println("[THERE ARE NO RECEIVERS FOR MESSAGE \"" + message.text + "\"]");
+        }
+    }
+
+    private boolean isMessageText(Message message) {
+        return message.header.equals(Message.Header.TEXT);
+    }
+
+    private boolean isNodeSender(Message message) {
+        return message.sourceName.equals(nodeName);
     }
 
     public void add(Message message, Neighbour receiver) {
@@ -46,8 +66,35 @@ public class MessageQueue {
     }
 
     private synchronized void removeMessageIfHasNoReceivers(Message message) {
-        if (messagesWithReceivers.get(message).isEmpty()) {
-            messagesWithReceivers.remove(message);
+        Message realMessage = findMessage(message);
+        if (messagesWithReceivers.get(realMessage).isEmpty()) {
+            messagesWithReceivers.remove(realMessage);
+            printDeliveredIfMessageIsTextAndNodeIsSender(realMessage);
         }
+    }
+
+    private synchronized Message findMessage(Message equalMessage) {
+        Set<Message> messages = getAllMessages();
+        for (var message : messages) {
+            if (message.equals(equalMessage)) {
+                return message;
+            }
+        }
+        throw new RuntimeException();
+    }
+
+    private void printDeliveredIfMessageIsTextAndNodeIsSender(Message message) {
+        if (isMessageText(message) && isNodeSender(message)) {
+            System.out.println("[MESSAGE \"" + message.text + "\" WAS DELIVERED]");
+        }
+    }
+
+    public synchronized void removeNeighbourFromReceivers(Neighbour neighbour) {
+        Set<Message> messages = messagesWithReceivers.keySet();
+        for (var message : messages) {
+            Set<Neighbour> neighbours = messagesWithReceivers.get(message);
+            neighbours.removeIf(neighbour::equals);
+        }
+        messages.removeIf(m -> messagesWithReceivers.get(m).isEmpty());
     }
 }

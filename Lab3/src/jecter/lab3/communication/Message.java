@@ -1,7 +1,5 @@
 package jecter.lab3.communication;
 
-import jecter.lab3.node.Neighbour;
-
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
@@ -10,7 +8,8 @@ public class Message implements Serializable {
     public enum Header {
         REQUEST,
         TEXT,
-        CONFIRMATION
+        CONFIRMATION,
+        PING
     }
 
 

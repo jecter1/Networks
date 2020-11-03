@@ -7,27 +7,26 @@ import java.util.Objects;
 
 public class Neighbour implements Addressable {
     private static final String DEFAULT_NAME = "Unknown";
+    private static final long RESPONDING_TIME_MS = 1000;
 
 
     private final InetSocketAddress address;
-    private String name;
+    private final String name;
+    private long lastReceivedPingMs;
 
 
     public Neighbour(Addressable addressable, String name) {
         this.address = addressable.getAddress();
         this.name = name;
+        updateTime();
     }
 
     public Neighbour(Addressable addressable) {
         this(addressable, DEFAULT_NAME);
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public boolean hasName() {
-        return !name.equals(DEFAULT_NAME);
+    public void updateTime() {
+        lastReceivedPingMs = System.currentTimeMillis();;
     }
 
     @Override
@@ -39,10 +38,14 @@ public class Neighbour implements Addressable {
         return name;
     }
 
+    public boolean isResponding() {
+        return (System.currentTimeMillis() - lastReceivedPingMs) < RESPONDING_TIME_MS;
+    }
+
     @Override
     public boolean equals(Object object) {
         if (sameRefs(object)) {
-            return equalsForSameRefs(object);
+            return true;
         } else {
             return equalsForDifferentRefs(object);
         }
@@ -50,10 +53,6 @@ public class Neighbour implements Addressable {
 
     private boolean sameRefs(Object object) {
         return (this == object);
-    }
-
-    private boolean equalsForSameRefs(Object object) {
-        return true;
     }
 
     private boolean equalsForDifferentRefs(Object object) {

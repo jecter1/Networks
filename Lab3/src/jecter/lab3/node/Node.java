@@ -8,38 +8,33 @@ import jecter.lab3.communication.Transceiver;
 import jecter.lab3.communication.exceptions.NotMessageException;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class Node {
     private final String name;
     private final Transceiver transceiver;
-    private final Set<Neighbour> neighbours;
+    private final Environment environment;
     private final MessageQueue messageQueue;
     private final MessageStatistics messageStatistics;
-    private boolean running = true;
+
+    private boolean communicating = true;
 
 
     public Node(String name, Transceiver transceiver) {
         this.name = name;
         this.transceiver = transceiver;
-        this.neighbours = Collections.newSetFromMap(new ConcurrentHashMap<>());
-        this.messageQueue = new MessageQueue();
+        this.environment = new Environment();
+        this.messageQueue = new MessageQueue(name);
         this.messageStatistics = new MessageStatistics();
     }
 
     public Node(String name, Transceiver transceiver, Neighbour parent) {
         this(name, transceiver);
-        addParent(parent);
+        addRequestMessageToQueue(parent);
     }
 
-    private void addParent(Neighbour parent) {
-        neighbours.add(parent);
-        sendRequestToParent(parent);
-    }
-
-    private void sendRequestToParent(Neighbour parent) {
+    private void addRequestMessageToQueue(Neighbour neighbour) {
         Message requestMessage = new Message(Message.Header.REQUEST, name);
-        messageQueue.add(requestMessage, parent);
+        messageQueue.add(requestMessage, neighbour);
     }
 
     public void startCommunication() {
@@ -61,8 +56,10 @@ public class Node {
 
             @Override
             public void run() {
-                while (running) {
+                while (communicating) {
                     sendAllMessagesToAllReceivers();
+                    removeNotRespondingNeighbours();
+                    ping();
                     sleep();
                 }
             }
@@ -110,6 +107,30 @@ public class Node {
                 }
             }
 
+            private void removeNotRespondingNeighbours() {
+                Set<Neighbour> neighbours = environment.getNeighbours();
+                for (var neighbour : neighbours) {
+                    removeNeighbourIfNorResponding(neighbour);
+                }
+            }
+
+            private void removeNeighbourIfNorResponding(Neighbour neighbour) {
+                if (!neighbour.isResponding()) {
+                    removeNeighbour(neighbour);
+                }
+            }
+
+            private void removeNeighbour(Neighbour neighbour) {
+                environment.removeNeighbour(neighbour);
+                messageQueue.removeNeighbourFromReceivers(neighbour);
+            }
+
+            private void ping() {
+                Message pingMessage = new Message(Message.Header.PING, name);
+                Set<Neighbour> receivers = environment.getNeighbours();
+                sendMessageToEachReceiverInSet(pingMessage, receivers);
+            }
+
             private void sleep() {
                 try {
                     Thread.sleep(SLEEP_MS);
@@ -134,7 +155,7 @@ public class Node {
 
             @Override
             public void run() {
-                while (running) {
+                while (communicating) {
                     receiveAndHandleMessage();
                 }
             }
@@ -155,42 +176,19 @@ public class Node {
             }
 
             private void findSenderOrAddToNeighbours() {
-                initSender();
+                currentSender = makeSender();
                 try {
-                    currentSender = findSender();
+                    currentSender = environment.findNeighbour(currentSender);
+                    currentSender.updateTime();
                 } catch (Exception e) {
-                    neighbours.add(currentSender);
-                    printNewNeighbour();
+                    environment.addNeighbour(currentSender);
                 }
             }
 
-            private void printNewNeighbour() {
-                String name = currentSender.getName();
-                System.out.println("[new neighbour: " + name + "]");
-            }
-
-            private void initSender() {
+            private Neighbour makeSender() {
                 Addressable source = transceiver.getLastReceiveSource();
                 String sourceName = currentMessage.sourceName;
-                currentSender = new Neighbour(source, sourceName);
-            }
-
-            private Neighbour findSender() {
-                for (var neighbour : neighbours) {
-                    if (neighbour.equals(currentSender)) {
-                        setNameIfNameless(neighbour);
-                        return neighbour;
-                    }
-                }
-                throw new RuntimeException();
-            }
-
-            private void setNameIfNameless(Neighbour neighbour) {
-                if (!neighbour.hasName()) {
-                    String name = currentSender.getName();
-                    neighbour.setName(name);
-                    printNewNeighbour();
-                }
+                return new Neighbour(source, sourceName);
             }
 
             private void handleMessage() {
@@ -242,55 +240,22 @@ public class Node {
             }
 
             private Set<Neighbour> makeResendReceivers() {
-                Set<Neighbour> receivers = new HashSet<>(neighbours);
+                Set<Neighbour> receivers = environment.getNeighbours();
                 receivers.remove(currentSender);
                 return receivers;
             }
 
             private void handleConfirmation() {
                 if (!messageStatistics.isReceived(currentMessage)) {
-                    setMessageReceivedIfThisSenderIsLastReceiverOfThisMessage();
                     messageQueue.remove(currentMessage, currentSender);
+                    setReceivedIfNoLongerContainsInQueue();
                 }
             }
 
-            private void setMessageReceivedIfThisSenderIsLastReceiverOfThisMessage() {
-                if (isSenderLastReceiverOfThisMessage()) {
+            private void setReceivedIfNoLongerContainsInQueue() {
+                if (!messageQueue.contains(currentMessage)) {
                     messageStatistics.addReceivedMessage(currentMessage);
-                    printDeliveredIfMessageIsTextAndNodeIsSource();
                 }
-            }
-
-            private boolean isSenderLastReceiverOfThisMessage() {
-                final int RECEIVERS_SIZE_ONE = 1;
-                return (messageQueue.contains(currentMessage) &&
-                        messageQueue.getReceivers(currentMessage).size() == RECEIVERS_SIZE_ONE &&
-                        messageQueue.getReceivers(currentMessage).contains(currentSender));
-            }
-
-            private void printDeliveredIfMessageIsTextAndNodeIsSource() {
-                Set<Message> messages = messageQueue.getAllMessages();
-                for (var message : messages) {
-                    if (isConfirmationForThisMessage(message) && isMessageText(message) && isNodeSource(message)) {
-                        printDelivered(message);
-                    }
-                }
-            }
-
-            private boolean isConfirmationForThisMessage(Message message) {
-                return message.equals(currentMessage);
-            }
-
-            private boolean isMessageText(Message message) {
-                return message.header.equals(Message.Header.TEXT);
-            }
-
-            private boolean isNodeSource(Message message) {
-                return message.sourceName.equals(name);
-            }
-
-            private void printDelivered(Message message) {
-                System.out.println("[message \"" + message.text + "\" was delivered]");
             }
         };
     }
@@ -313,25 +278,25 @@ public class Node {
             }
 
             private void readAndPutMessagesWhileRunning() {
-                while (running) {
+                while (communicating) {
                     readAndPutMessage();
                 }
             }
 
             private void readAndPutMessage() {
                 String text = scanner.nextLine();
-                putMessage(text);
+                addTextToQueue(text);
             }
 
-            private void putMessage(String text) {
+            private void addTextToQueue(String text) {
                 Message message = new Message(Message.Header.TEXT, name, text);
-                Set<Neighbour> receivers = new HashSet<>(neighbours);
+                Set<Neighbour> receivers = environment.getNeighbours();
                 messageQueue.add(message, receivers);
             }
         };
     }
 
     public void stopCommunication() {
-        running = false;
+        communicating = false;
     }
 }
