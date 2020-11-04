@@ -123,15 +123,34 @@ public class Node {
             private void removeNeighbour(Neighbour neighbour) {
                 environment.removeNeighbour(neighbour);
                 messageQueue.removeNeighbourFromReceivers(neighbour);
+                connectToNeighbourSubstitute(neighbour);
+            }
+
+            private void connectToNeighbourSubstitute(Neighbour neighbour) {
                 try {
-                    Substitute neighbourSubstitute = neighbour.getSubstitute();
-                    if (!(neighbourSubstitute.getAddress().getAddress().isAnyLocalAddress() ||
-                            neighbourSubstitute.getAddress().getAddress().isLoopbackAddress()) ||
-                            neighbourSubstitute.getAddress().getPort() != transceiver.getAddress().getPort()) {
-                        Neighbour neighbourToConnect = new Neighbour(neighbourSubstitute);
-                        addRequestMessageToQueue(neighbourToConnect);
-                    }
+                    tryToConnectToNeighbourSubstitute(neighbour);
                 } catch (Exception ignore) { }
+            }
+
+            private void tryToConnectToNeighbourSubstitute(Neighbour neighbour) {
+                Substitute neighbourSubstitute = neighbour.getSubstitute();
+                if (!isNodeSubstitute(neighbourSubstitute)) {
+                    Neighbour neighbourToConnect = new Neighbour(neighbourSubstitute);
+                    addRequestMessageToQueue(neighbourToConnect);
+                }
+            }
+
+            private boolean isNodeSubstitute(Substitute substitute) {
+                return areAddressesSame(substitute) && arePortsSame(substitute);
+            }
+
+            private boolean areAddressesSame(Substitute substitute) {
+                return (substitute.getAddress().getAddress().isAnyLocalAddress() ||
+                        substitute.getAddress().getAddress().isLoopbackAddress());
+            }
+
+            private boolean arePortsSame(Substitute substitute) {
+                return substitute.getAddress().getPort() == transceiver.getAddress().getPort();
             }
 
             private void ping() {

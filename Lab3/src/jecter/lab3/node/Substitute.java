@@ -10,11 +10,7 @@ public class Substitute implements Addressable, Serializable {
 
 
     private InetSocketAddress address;
-
-
-    public Substitute(Addressable addressable) {
-        this.address = addressable.getAddress();
-    }
+    
 
     public Substitute() {
         this.address = NO_ADDRESS;

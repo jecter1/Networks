@@ -10,22 +10,38 @@ public class Environment {
 
     public void addNeighbour(Neighbour neighbour) {
         neighbours.add(neighbour);
-        if (!substitute.exists()) {
-            substitute.setAddress(neighbour);
-        }
+        initializeSubstituteIfNotExists(neighbour);
         System.out.println("[NEIGHBOUR <" + neighbour.getName() + "> ADDED]");
+    }
+
+    private void initializeSubstituteIfNotExists(Neighbour neighbour) {
+        if (!substitute.exists()) {
+            substitute.setAddress(neighbour.getAddress());
+        }
     }
 
     public void removeNeighbour(Neighbour neighbour) {
         neighbours.remove(neighbour);
-        if (substitute.exists() && substitute.getAddress().equals(neighbour.getAddress())) {
-            if (!neighbours.isEmpty()) {
-                substitute.setAddress(neighbours.iterator().next());
-            } else {
-                substitute.remove();
-            }
-        }
+        changeSubstituteIfNeighbourIsSubstitute(neighbour);
         System.out.println("[NEIGHBOUR <" + neighbour.getName() + "> REMOVED]");
+    }
+
+    private void changeSubstituteIfNeighbourIsSubstitute(Neighbour neighbour) {
+        if (isNeighbourSubstitute(neighbour)) {
+            changeSubstitute();
+        }
+    }
+
+    private boolean isNeighbourSubstitute(Neighbour neighbour) {
+        return (substitute.exists() && substitute.getAddress().equals(neighbour.getAddress()));
+    }
+
+    private void changeSubstitute() {
+        if (!neighbours.isEmpty()) {
+            substitute.setAddress(neighbours.iterator().next());
+        } else {
+            substitute.remove();
+        }
     }
 
     public Substitute getSubstitute() {

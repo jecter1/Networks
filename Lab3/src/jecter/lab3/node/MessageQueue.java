@@ -19,6 +19,12 @@ public class MessageQueue {
             printNoReceiversIfMessageIsTextAndNodeIsSender(message);
             return;
         }
+        // DEBUG PRINTF
+        // System.out.print("{New message in queue: " + message.getHeader() + " ->");
+        // for (var receiver : receivers) {
+        //    System.out.print(" " + receiver.getName());
+        // }
+        // System.out.println("}");
         messagesWithReceivers.put(message, receivers);
     }
 
@@ -37,6 +43,7 @@ public class MessageQueue {
     }
 
     public void add(Message message, Neighbour receiver) {
+        if (messagesWithReceivers.containsKey(message)) return;
         Set<Neighbour> receivers = new HashSet<>();
         receivers.add(receiver);
         add(message, receivers);
@@ -62,6 +69,8 @@ public class MessageQueue {
     public synchronized void remove(Message message, Neighbour neighbour) {
         Set<Neighbour> receivers = messagesWithReceivers.get(message);
         receivers.remove(neighbour);
+        // DEBUG PRINTF
+        // System.out.println("{Removed message from queue: " + findMessage(message).getHeader() + " -> " + neighbour.getName() + "}");
         removeMessageIfHasNoReceivers(message);
     }
 
