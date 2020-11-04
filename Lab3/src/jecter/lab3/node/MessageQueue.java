@@ -24,16 +24,16 @@ public class MessageQueue {
 
     private void printNoReceiversIfMessageIsTextAndNodeIsSender(Message message) {
         if (isMessageText(message) && isNodeSender(message)) {
-            System.out.println("[THERE ARE NO RECEIVERS FOR MESSAGE \"" + message.text + "\"]");
+            System.out.println("[THERE ARE NO RECEIVERS FOR MESSAGE \"" + message.getText() + "\"]");
         }
     }
 
     private boolean isMessageText(Message message) {
-        return message.header.equals(Message.Header.TEXT);
+        return message.is(Message.Header.TEXT);
     }
 
     private boolean isNodeSender(Message message) {
-        return message.sourceName.equals(nodeName);
+        return message.getSourceName().equals(nodeName);
     }
 
     public void add(Message message, Neighbour receiver) {
@@ -85,7 +85,7 @@ public class MessageQueue {
 
     private void printDeliveredIfMessageIsTextAndNodeIsSender(Message message) {
         if (isMessageText(message) && isNodeSender(message)) {
-            System.out.println("[MESSAGE \"" + message.text + "\" WAS DELIVERED]");
+            System.out.println("[MESSAGE \"" + message.getText() + "\" WAS DELIVERED]");
         }
     }
 

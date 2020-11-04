@@ -1,5 +1,7 @@
 package jecter.lab3.communication;
 
+import jecter.lab3.node.Substitute;
+
 import java.io.Serializable;
 import java.util.Objects;
 import java.util.UUID;
@@ -13,38 +15,74 @@ public class Message implements Serializable {
     }
 
 
-    private static final String EMPTY_TEXT = "";
+    private static final String NO_TEXT = null;
 
 
-    public final UUID id;
-    public final Header header;
-    public final String sourceName;
-    public final String text;
+    private final UUID id;
+    private final Header header;
+    private final String sourceName;
+    private String text = NO_TEXT;
+    private Substitute substitute = new Substitute();
 
 
-    public Message(UUID id, Header header, String sourceName, String text) {
+    public Message(UUID id, Header header, String sourceName) {
         this.id = id;
         this.header = header;
         this.sourceName = sourceName;
-        this.text = text;
-    }
-
-    public Message(UUID id, Header header, String sourceName) {
-        this(id, header, sourceName, EMPTY_TEXT);
-    }
-
-    public Message(Header header, String sourceName, String text) {
-        this(UUID.randomUUID(), header, sourceName, text);
     }
 
     public Message(Header header, String sourceName) {
-        this(header, sourceName, EMPTY_TEXT);
+        this(UUID.randomUUID(), header, sourceName);
+    }
+
+    public void addText(String text) {
+        if (header.equals(Header.TEXT)) {
+            this.text = text;
+        } else {
+            throw new RuntimeException();
+        }
+    }
+
+    public void addSubstitute(Substitute substitute) {
+        if (header.equals(Header.PING)) {
+            this.substitute = substitute;
+        } else {
+            throw new RuntimeException();
+        }
+    }
+
+    public UUID getID() {
+        return id;
+    }
+
+    public Header getHeader() {
+        return header;
+    }
+
+    public String getSourceName() {
+        return sourceName;
+    }
+
+    public String getText() {
+        if (text != NO_TEXT) {
+            return text;
+        } else {
+            throw new RuntimeException();
+        }
+    }
+
+    public Substitute getSubstitute() {
+        return substitute;
+    }
+
+    public boolean is(Header header) {
+        return (this.header.equals(header));
     }
 
     @Override
     public boolean equals(Object object) {
         if (sameRefs(object)) {
-            return equalsForSameRefs(object);
+            return true;
         } else {
             return equalsForDifferentRefs(object);
         }
@@ -52,10 +90,6 @@ public class Message implements Serializable {
 
     private boolean sameRefs(Object object) {
         return (this == object);
-    }
-
-    private boolean equalsForSameRefs(Object object) {
-        return true;
     }
 
     private boolean equalsForDifferentRefs(Object object) {

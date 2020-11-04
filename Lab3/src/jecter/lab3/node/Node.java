@@ -102,7 +102,7 @@ public class Node {
             }
 
             private void removeIfConfirmation(Message message, Neighbour receiver) {
-                if (message.header.equals(Message.Header.CONFIRMATION)) {
+                if (message.is(Message.Header.CONFIRMATION)) {
                     messageQueue.remove(message, receiver);
                 }
             }
@@ -123,10 +123,20 @@ public class Node {
             private void removeNeighbour(Neighbour neighbour) {
                 environment.removeNeighbour(neighbour);
                 messageQueue.removeNeighbourFromReceivers(neighbour);
+                try {
+                    Substitute neighbourSubstitute = neighbour.getSubstitute();
+                    if (!(neighbourSubstitute.getAddress().getAddress().isAnyLocalAddress() ||
+                            neighbourSubstitute.getAddress().getAddress().isLoopbackAddress()) ||
+                            neighbourSubstitute.getAddress().getPort() != transceiver.getAddress().getPort()) {
+                        Neighbour neighbourToConnect = new Neighbour(neighbourSubstitute);
+                        addRequestMessageToQueue(neighbourToConnect);
+                    }
+                } catch (Exception ignore) { }
             }
 
             private void ping() {
                 Message pingMessage = new Message(Message.Header.PING, name);
+                pingMessage.addSubstitute(environment.getSubstitute());
                 Set<Neighbour> receivers = environment.getNeighbours();
                 sendMessageToEachReceiverInSet(pingMessage, receivers);
             }
@@ -179,7 +189,6 @@ public class Node {
                 currentSender = makeSender();
                 try {
                     currentSender = environment.findNeighbour(currentSender);
-                    currentSender.updateTime();
                 } catch (Exception e) {
                     environment.addNeighbour(currentSender);
                 }
@@ -187,15 +196,16 @@ public class Node {
 
             private Neighbour makeSender() {
                 Addressable source = transceiver.getLastReceiveSource();
-                String sourceName = currentMessage.sourceName;
+                String sourceName = currentMessage.getSourceName();
                 return new Neighbour(source, sourceName);
             }
 
             private void handleMessage() {
-                switch (currentMessage.header) {
+                switch (currentMessage.getHeader()) {
                     case REQUEST -> handleRequest();
                     case TEXT -> handleText();
                     case CONFIRMATION -> handleConfirmation();
+                    case PING -> handlePing();
                 }
             }
 
@@ -207,7 +217,7 @@ public class Node {
             }
 
             private void addConfirmationToMessages() {
-                Message confirmMessage = new Message(currentMessage.id, Message.Header.CONFIRMATION, name);
+                Message confirmMessage = new Message(currentMessage.getID(), Message.Header.CONFIRMATION, name);
                 messageQueue.add(confirmMessage, currentSender);
             }
 
@@ -221,8 +231,8 @@ public class Node {
             }
 
             private void printText() {
-                String name = currentMessage.sourceName;
-                String text = currentMessage.text;
+                String name = currentMessage.getSourceName();
+                String text = currentMessage.getText();
                 System.out.println(name + ": " + text);
             }
 
@@ -233,10 +243,12 @@ public class Node {
             }
 
             private Message makeResendMessage() {
-                Message.Header header = currentMessage.header;
-                String sourceName = currentMessage.sourceName;
-                String text = currentMessage.text;
-                return new Message(header, sourceName, text);
+                Message.Header header = currentMessage.getHeader();
+                String sourceName = currentMessage.getSourceName();
+                String text = currentMessage.getText();
+                Message resendMessage = new Message(header, sourceName);
+                resendMessage.addText(text);
+                return resendMessage;
             }
 
             private Set<Neighbour> makeResendReceivers() {
@@ -255,6 +267,16 @@ public class Node {
             private void setReceivedIfNoLongerContainsInQueue() {
                 if (!messageQueue.contains(currentMessage)) {
                     messageStatistics.addReceivedMessage(currentMessage);
+                }
+            }
+
+            private void handlePing() {
+                currentSender.updateTime();
+                try {
+                    Substitute substitute = currentMessage.getSubstitute();
+                    currentSender.setSubstitute(substitute);
+                } catch (Exception e) {
+                    currentSender.getSubstitute().remove();
                 }
             }
         };
@@ -289,7 +311,8 @@ public class Node {
             }
 
             private void addTextToQueue(String text) {
-                Message message = new Message(Message.Header.TEXT, name, text);
+                Message message = new Message(Message.Header.TEXT, name);
+                message.addText(text);
                 Set<Neighbour> receivers = environment.getNeighbours();
                 messageQueue.add(message, receivers);
             }

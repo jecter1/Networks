@@ -5,7 +5,7 @@ import jecter.lab3.node.Neighbour;
 import jecter.lab3.node.Node;
 import jecter.lab3.communication.Transceiver;
 
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 
 public class Main {
     private static Arguments arguments;
@@ -32,7 +32,7 @@ public class Main {
     }
 
     private static Transceiver createTransceiver() {
-        SocketAddress address = arguments.getAddress();
+        InetSocketAddress address = arguments.getAddress();
         int lossPercent = arguments.getLossPercent();
         return new Transceiver(address, lossPercent);
     }

@@ -14,15 +14,17 @@ public class Transceiver implements AutoCloseable, Addressable {
     private final DatagramSocket socket;
     private final Receiver receiver;
     private final Sender sender;
+    private final InetSocketAddress address;
 
 
-    public Transceiver(SocketAddress address, int lossPercent) {
+    public Transceiver(InetSocketAddress address, int lossPercent) {
         this.socket = createSocket(address);
         this.receiver = new Receiver(socket, lossPercent);
         this.sender = new Sender(socket);
+        this.address = address;
     }
 
-    private DatagramSocket createSocket(SocketAddress address) {
+    private DatagramSocket createSocket(InetSocketAddress address) {
         try {
             return new DatagramSocket(address);
         } catch (SocketException e) {
@@ -50,6 +52,6 @@ public class Transceiver implements AutoCloseable, Addressable {
 
     @Override
     public InetSocketAddress getAddress() {
-        return new InetSocketAddress(socket.getInetAddress(), socket.getPort());
+        return address;
     }
 }

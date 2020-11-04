@@ -2,7 +2,6 @@ package jecter.lab3.application;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 public class Arguments {
     private static String[] args;
@@ -30,7 +29,7 @@ public class Arguments {
 
     private final String name;
     private final int lossPercent;
-    private final SocketAddress address;
+    private final InetSocketAddress address;
     private InetSocketAddress parentAddress;
 
 
@@ -68,7 +67,7 @@ public class Arguments {
     private static Arguments tryToParseDetached() {
         String name = tryToParseName();
         int lossPercent = tryToParseLossPercent();
-        SocketAddress address = tryToParseAddress();
+        InetSocketAddress address = tryToParseAddress();
         return new Arguments(name, lossPercent, address);
     }
 
@@ -98,9 +97,8 @@ public class Arguments {
         return (lossPercent >= MIN_LOSS && lossPercent <= MAX_LOSS);
     }
 
-    private static SocketAddress tryToParseAddress() {
+    private static InetSocketAddress tryToParseAddress() {
         int port = tryToParsePort();
-
         return new InetSocketAddress(port);
     }
 
@@ -142,14 +140,14 @@ public class Arguments {
     }
 
 
-    private Arguments(String name, int lossPercent, SocketAddress address, InetSocketAddress parentAddress) {
+    private Arguments(String name, int lossPercent, InetSocketAddress address, InetSocketAddress parentAddress) {
         this.name = name;
         this.lossPercent = lossPercent;
         this.address = address;
         this.parentAddress = parentAddress;
     }
 
-    private Arguments(String name, int lossPercent, SocketAddress address) {
+    private Arguments(String name, int lossPercent, InetSocketAddress address) {
         this(name, lossPercent, address, DETACHED_PARENT_ADDRESS);
     }
 
@@ -161,7 +159,7 @@ public class Arguments {
         return lossPercent;
     }
 
-    public SocketAddress getAddress() {
+    public InetSocketAddress getAddress() {
         return address;
     }
 

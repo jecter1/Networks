@@ -13,6 +13,7 @@ public class Neighbour implements Addressable {
     private final InetSocketAddress address;
     private final String name;
     private long lastReceivedPingMs;
+    private final Substitute substitute = new Substitute();
 
 
     public Neighbour(Addressable addressable, String name) {
@@ -34,12 +35,20 @@ public class Neighbour implements Addressable {
         return address;
     }
 
+    public Substitute getSubstitute() {
+        return substitute;
+    }
+
     public String getName() {
         return name;
     }
 
     public boolean isResponding() {
         return (System.currentTimeMillis() - lastReceivedPingMs) < RESPONDING_TIME_MS;
+    }
+
+    public void setSubstitute(Substitute substitute) {
+        this.substitute.setAddress(substitute);
     }
 
     @Override
