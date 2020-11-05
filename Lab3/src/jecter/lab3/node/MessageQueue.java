@@ -20,11 +20,11 @@ public class MessageQueue {
             return;
         }
         // DEBUG PRINTF
-        // System.out.print("{New message in queue: " + message.getHeader() + " ->");
-        // for (var receiver : receivers) {
-        //    System.out.print(" " + receiver.getName());
-        // }
-        // System.out.println("}");
+        /*System.out.print("{New message in queue: " + message.getHeader() + " ->");
+        for (var receiver : receivers) {
+            System.out.print(" " + receiver.getName());
+        }
+        System.out.println("}");*/
         messagesWithReceivers.put(message, receivers);
     }
 

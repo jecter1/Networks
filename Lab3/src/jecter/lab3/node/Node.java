@@ -134,29 +134,23 @@ public class Node {
 
             private void tryToConnectToNeighbourSubstitute(Neighbour neighbour) {
                 Substitute neighbourSubstitute = neighbour.getSubstitute();
-                if (!isNodeSubstitute(neighbourSubstitute)) {
-                    Neighbour neighbourToConnect = new Neighbour(neighbourSubstitute);
-                    addRequestMessageToQueue(neighbourToConnect);
-                }
-            }
-
-            private boolean isNodeSubstitute(Substitute substitute) {
-                return areAddressesSame(substitute) && arePortsSame(substitute);
-            }
-
-            private boolean areAddressesSame(Substitute substitute) {
-                return (substitute.getAddress().getAddress().isAnyLocalAddress() ||
-                        substitute.getAddress().getAddress().isLoopbackAddress());
-            }
-
-            private boolean arePortsSame(Substitute substitute) {
-                return substitute.getAddress().getPort() == transceiver.getAddress().getPort();
+                Neighbour neighbourToConnect = new Neighbour(neighbourSubstitute);
+                addRequestMessageToQueue(neighbourToConnect);
             }
 
             private void ping() {
                 Message pingMessage = new Message(Message.Header.PING, name);
-                pingMessage.addSubstitute(environment.getSubstitute());
+                Substitute substitute = environment.getSubstitute();
                 Set<Neighbour> receivers = environment.getNeighbours();
+
+                if (substitute.exists()) {
+                    Neighbour substituteNeighbour = new Neighbour(substitute);
+                    sendMessageToReceiver(pingMessage, substituteNeighbour);
+
+                    pingMessage.addSubstitute(substitute);
+                    receivers.remove(substituteNeighbour);
+                }
+
                 sendMessageToEachReceiverInSet(pingMessage, receivers);
             }
 
@@ -264,8 +258,8 @@ public class Node {
             private Message makeResendMessage() {
                 Message.Header header = currentMessage.getHeader();
                 String sourceName = currentMessage.getSourceName();
-                String text = currentMessage.getText();
                 Message resendMessage = new Message(header, sourceName);
+                String text = currentMessage.getText();
                 resendMessage.addText(text);
                 return resendMessage;
             }
